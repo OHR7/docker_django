@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    container_name: test_db
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command: python manage.py test
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .envs/.local

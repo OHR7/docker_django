@@ -1,0 +1,7 @@
+-r ./base.txt
+
+django-extensions==2.1.4
+gunicorn==19.9.0
+
+# Code quality
+flake8==3.6.0

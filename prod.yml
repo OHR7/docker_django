@@ -1,0 +1,28 @@
+version: '2'
+
+services:
+  nginx:
+    volumes:
+      - ./src:/src
+      - ./config/nginx:/etc/nginx/conf.d
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8000:8000"
+    depends_on:
+      - web
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn docker_test.wsgi -b 0.0.0.0:8000"
+    expose:
+      - "8000"
+    environment:
+      - SECRET_KEY
+#    env_file:
+#      - .envs/.prod
+  redis:
+    image: redis:3.2
+    depends_on:
+      - web

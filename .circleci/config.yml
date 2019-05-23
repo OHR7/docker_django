@@ -1,0 +1,37 @@
+version: 2.1
+
+orbs:
+  aws-ecr: circleci/aws-ecr@0.0.2
+  aws-ecs: circleci/aws-ecs@0.0.8
+
+jobs:
+  test:
+    steps:
+      - checkout
+      - run: docker build -t $DOCKER_IMAGE:latest .
+      - run: docker run -d --rm --name django_test $DOCKER_IMAGE:latest
+      - run: docker exec -it django_test python manage.py test
+      - run: docker stop django_test
+
+  publish:
+    steps:
+      - checkout
+      - run: docker build --build-arg APP_VERSION=$CIRCLE_SHA1 -t $DOCKER_IMAGE:$CIRCLE_SHA1 .
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - run: docker push $DOCKER_IMAGE:$CIRCLE_SHA1
+
+  # This is optional
+  - aws-ecr/build_and_push_image:
+      account-url: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+      repo: "${AWS_RESOURCE_NAME_PREFIX}"
+      region: ${AWS_DEFAULT_REGION}
+      tag: "${CIRCLE_SHA1}"
+
+  - aws-ecs/deploy-service-update:
+      requires:
+        - aws-ecr/build_and_push_image
+      aws-region: ${AWS_DEFAULT_REGION}
+      family: "${AWS_RESOURCE_NAME_PREFIX}-service"
+      cluster-name: "${AWS_RESOURCE_NAME_PREFIX}-cluster"
+      container-image-name-updates: "container=${AWS_RESOURCE_NAME_PREFIX}-service,tag=${CIRCLE_SHA1}"
+
